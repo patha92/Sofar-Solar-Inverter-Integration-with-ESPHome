@@ -19,8 +19,9 @@ The Microcontroller and the RS485-Converter are soldered on a dummy-PCB with the
 | Tx  | Rx  |
 | Rx  | TX  |
 
-![grafik](https://github.com/user-attachments/assets/d191c488-ed57-41e9-8cd8-d0ac03a024b6)
-![grafik](https://github.com/user-attachments/assets/e7484d92-ac36-435c-8305-e3574c031422)
+![grafik](https://github.com/user-attachments/assets/0ecafaa8-bd70-4d44-90db-cf56a00a96d5)
+![grafik](https://github.com/user-attachments/assets/4c3c5781-a76c-4332-b757-ff6a74103366)
+
 
 The ESP32-Microcontroller is powered with 5V from the DIN rail power supply. The converter shares the same ground potential but is supplied with 3.3V from the ESP.
 
@@ -35,8 +36,9 @@ The inverter is connected via the multi-plug. The connection between the RS485-C
 | RS485 Converter A+  | Inverter Pin 1 (brown)  |
 | RS485 Converter B- | Inverter Pin 3 (white)  |
 
-![grafik](https://github.com/user-attachments/assets/f0116d7c-1a4d-46f1-b8af-2cb4a43883e4)
-![grafik](https://github.com/user-attachments/assets/3e2ad736-a138-4651-aab7-47275db5bc9f)
+![grafik](https://github.com/user-attachments/assets/d0a3f355-7305-407f-b30a-1ac0c6fbae3b)
+![grafik](https://github.com/user-attachments/assets/8bc545da-f76c-4980-9083-7b59689c31c7)
+
 
 ## ESPHome
 ESPhome accesses the defined Modbus-Register of the inverter (defined in the ESPHome.yaml-File) and provides the data to HomeAssistant. In my file, I´ve only read some of the register of high interest for me - the register-list can be found at Sofar Solar directly and therefore the file can be customized to the individual wishes.
