@@ -1,0 +1,400 @@
+esphome:
+  name: control-inverter
+  friendly_name: Control_Inverter
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+  level: VERY_VERBOSE
+  tx_buffer_size: 2048 # Only needed when logging large packets
+  hardware_uart: UART1
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+ota:
+  - platform: esphome
+    password: "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  use_address: XXX.XXX.XXX.XXX
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Control-Wr Fallback Hotspot"
+    password: "XXXXXXXX"
+
+captive_portal:
+
+uart:
+  tx_pin: GPIO03
+  rx_pin: GPIO01
+  baud_rate: 9600 
+  stop_bits: 1
+
+modbus:
+  send_wait_time: 200ms
+  id: modbus_inverter
+
+modbus_controller:
+  - id: sofar_inverter
+    address: 0x1
+    modbus_id: modbus_inverter
+    command_throttle: 0ms
+    setup_priority: -10
+    update_interval: 30s
+
+
+text_sensor:
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: inverter_state
+    name: "Inverter state"
+    address: 0x0404
+    register_type: holding
+    raw_encode: HEXBYTES
+    lambda: |-
+      uint16_t value = modbus_controller::word_from_hex_str(x, 0);
+      switch (value) {
+        case 0: return std::string("Waiting");
+        case 1: return std::string("Detection");
+        case 2: return std::string("Grid-connected");
+        case 3: return std::string("Emergency power");
+        case 4: return std::string("Recoverable fault");
+        case 5: return std::string("Permanent fault");
+        case 6: return std::string("Upgrade");
+        case 7: return std::string("Self-charging");
+        default: return std::string("Unknown");
+      }
+      return x;
+
+sensor:
+
+# curent data
+
+  #  Current inverter temperature
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: Current_Inverter_temperature
+    name: "Current inverter temperature"
+    address: 0x420
+    register_type: holding
+    value_type: S_WORD
+    filters:
+      - multiply: 1
+    unit_of_measurement: "°C"
+    device_class: power
+    accuracy_decimals: 1
+    icon: "mdi:thermometer"
+
+  # Current power PV string 1
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: Current_power_PV_string1
+    name: "Current power PV String 1"
+    address: 0x0586
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kW
+    device_class: power
+    accuracy_decimals: 1
+    icon: "mdi:solar-power-variant-outline"
+  
+  # Current power PV string 2
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: Current_power_PV_string2
+    name: "Current power PV String 2"
+    address: 0x0589
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kW
+    device_class: power
+    accuracy_decimals: 1
+    icon: "mdi:solar-power-variant-outline"
+
+  #  Current power PV
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: Current_power_PV
+    name: "Current power PV"
+    address: 0x05C4
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.1
+    unit_of_measurement: kW
+    device_class: power
+    accuracy_decimals: 1
+    icon: "mdi:solar-power-variant-outline"
+
+  # Current power load
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: Current_power_load
+    name: "Current power load"
+    address: 0x04AF
+    register_type: holding
+    value_type: S_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kW
+    device_class: power
+    accuracy_decimals: 1
+    icon: "mdi:home-lightning-bolt-outline"
+
+  # Current power grid
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: Current_power_grid
+    name: "Current power grid"
+    address: 0x0488
+    register_type: holding
+    value_type: S_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kW
+    device_class: power
+    accuracy_decimals: 1
+    icon: "mdi:transmission-tower"
+
+  # Current power battery
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: current_power_battery
+    name: "Current power battery"
+    address: 0x0667
+    register_type: holding
+    value_type: S_WORD
+    filters:
+      - multiply: 0.1
+    unit_of_measurement: kW
+    device_class: power
+    accuracy_decimals: 1
+    icon: "mdi:home-battery-outline"
+
+# Current SOC battery
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: current_soc_battery
+    name: "Current SOC battery"
+    address: 0x0668
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 1
+    unit_of_measurement: "%"
+    device_class: energy
+    accuracy_decimals: 0
+    icon: "mdi:battery-charging-50"
+
+
+
+# Energy today
+
+  # Energy generated today
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: energy_generated_today
+    name: "Energy generated today"
+    address: 0x0685
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:solar-power-variant"
+    state_class: total_increasing
+
+  # Energy consumed today
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: energy_consumed_today
+    name: "Energy consumed today"
+    address: 0x0689
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:home-lightning-bolt"
+    state_class: total_increasing
+
+  # Energy purchased today
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: energy_purchased_today
+    name: "Energy purchased today"
+    address: 0x068D
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:transmission-tower-export"
+    state_class: total_increasing
+
+  # Energy sold today
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: energy_sold_today
+    name: "Energy sold today"
+    address: 0x0691
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:transmission-tower-import"
+    state_class: total_increasing
+
+  # Energy battery charged today
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: energy_batetry_discharged_today
+    name: "Energy battery charged today"
+    address: 0x0695
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:battery-charging-80"
+    state_class: total_increasing
+
+  # Energy battery discharged today
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: energy_battery_discharged_today
+    name: "Energy battery discharged today"
+    address: 0x0699
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.01
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:battery-charging-10"
+    state_class: total_increasing
+    
+
+# Total energy
+
+  # Total energy generated
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: total_energy_generated
+    name: "Total energy generated"
+    address: 0x0687
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.1
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:solar-power-variant"
+    state_class: total_increasing
+
+  # Total energy consumed
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: total_energy_consumed
+    name: "Total energy consumed"
+    address: 0x068B
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.1
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:home-lightning-bolt"
+    state_class: total_increasing
+
+  # Total energy purchased
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: total_energy_purchased
+    name: "Total energy purchased"
+    address: 0x068F
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.1
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:transmission-tower-export"
+    state_class: total_increasing
+
+# Total energy sold
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: total_energy_sold
+    name: "Total energy sold"
+    address: 0x0693
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.1
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:transmission-tower-import"
+    state_class: total_increasing
+
+# Total energy battery charged
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: total_energy_batetry_discharged
+    name: "Total energy battery charged"
+    address: 0x0697
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.1
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:battery-charging-80"
+    state_class: total_increasing
+
+# Total energy battery discharged
+  - platform: modbus_controller
+    modbus_controller_id: sofar_inverter
+    id: total_energy_battery_discharged
+    name: "Total energy battery discharged"
+    address: 0x069B
+    register_type: holding
+    value_type: U_WORD
+    filters:
+      - multiply: 0.1
+    unit_of_measurement: kWh
+    device_class: energy
+    accuracy_decimals: 1
+    icon: "mdi:battery-charging-10"
+    state_class: total_increasing
